@@ -6,7 +6,7 @@ const redirectToNextStep = (orderNumber, frontend) => {
   }
 }
 
-const updateOrder = async (orderNumber, orderToken, leaseId, leaseNumber, paymentMethodId, frontend) => {
+const updateOrder = async (orderNumber, orderToken, leaseId, leaseNumber, orderToken, paymentMethodId, frontend) => {
   await fetch(`/api/checkouts/${orderNumber}`, {
     method: "PATCH",
     headers: {
@@ -36,7 +36,7 @@ const createPayment = async (acima, transaction, orderNumber, orderToken, paymen
     transaction: transaction
   })
   .then(({ leaseId, leaseNumber, checkoutToken }) => {
-    updateOrder(orderNumber, orderToken, leaseId, leaseNumber, checkoutToken, paymentMethodId);
+    updateOrder(orderNumber, orderToken, leaseId, leaseNumber, orderToken, checkoutToken, paymentMethodId, frontend);
     displayPaymentResults('SUCCESS');
   })
   .catch(({ code, message }) => {
