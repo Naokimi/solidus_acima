@@ -1,0 +1,15 @@
+<div
+  id="iframe-container" class="acima-iframe-hidden"
+  data-merchant-id="<%= payment_method.preferred_merchant_id %>"
+  data-iframe-url="<%= payment_method.preferred_iframe_url %>"
+  data-transaction="<%= order_for_acima_transaction(@order) %>"
+  data-order-number="<%= @order.number %>"
+  data-order-token="<%= @order.guest_token %>"
+  data-payment-method-id="<%= payment_method.id %>"
+  data-advance-checkout-url="<%= advance_api_checkout_url(id: @order.number) %>"
+  data-frontend="<%= frontend %>"
+  >
+</div>
+<div id="payment-status-container"></div>
+<button id="acima-card-button" type="button">Pay</button>
+<script src="https://ecom.sandbox.acimacredit.com/js/acima.min.js"></script>

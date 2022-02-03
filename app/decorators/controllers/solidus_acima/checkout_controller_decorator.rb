@@ -7,5 +7,6 @@ module SolidusAcima
     end
 
     ::Spree::CheckoutController.prepend(self) if SolidusSupport.frontend_available?
+    ::Spree::Admin::PaymentsController.prepend(self) if SolidusSupport.backend_available?
   end
 end
