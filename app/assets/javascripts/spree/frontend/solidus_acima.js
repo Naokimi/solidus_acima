@@ -1,19 +1,39 @@
 // Placeholder manifest file.
 // the installer will append this file to the app vendored assets here: vendor/assets/javascripts/spree/frontend/all.js'
 
-// Call this function to start the Acima iframe process
-// on success send an API call to create a payment
-const createPayment = async (acima, transaction) => {
-  const paymentStatusDiv = document.getElementById('payment-status-container');
+const updateOrder = async (orderNumber, orderToken, leaseId, leaseNumber, paymentMethodId) => {
+  await fetch(`/api/checkouts/${orderNumber}`, {
+    method: "PATCH",
+    headers: {
+      'Content-Type': 'application/json',
+      "X-Spree-Order-Token": orderToken
+    },
+    data: {
+      order: {
+        payment_attributes: [{
+          payment_method_id: paymentMethodId,
+          lease_id: leaseId,
+          lease_number: leaseNumber,
+          checkout_token: checkoutToken
+        }]
+      }
+    }
+  })
+}
 
+// Call this function to start the Acima iframe process
+// on success send an API call to create a payment and advance to next step
+const createPayment = async (acima, transaction, orderNumber, orderToken, paymentMethodId) => {
   acima.checkout({
     transaction: transaction
   })
-  .then(() => {
-    // call api to create payment
+  .then(({ leaseId, leaseNumber, checkoutToken }) => {
+    updateOrder(orderNumber, orderToken, leaseId, leaseNumber, checkoutToken, paymentMethodId)
     displayPaymentResults('SUCCESS')
+    window.location.href = '/checkout';
   })
-  .catch(() => {
+  .catch(({ code, message }) => {
+    console.log(`error ${code}: ${message}`)
     displayPaymentResults('FAILURE')
   })
 }
@@ -23,9 +43,13 @@ const createPayment = async (acima, transaction) => {
 const displayPaymentResults = (status) => {
   const statusContainer = document.getElementById('payment-status-container');
   if (status === 'SUCCESS') {
+    document.getElementById('card-container').remove()
+    document.getElementById('square-card-button').remove()
+    statusContainer.innerHTML = 'Payment Success'
     statusContainer.classList.remove('is-failure');
     statusContainer.classList.add('is-success');
   } else {
+    statusContainer.innerHTML = 'Payment Failure'
     statusContainer.classList.remove('is-success');
     statusContainer.classList.add('is-failure');
   }
@@ -58,7 +82,11 @@ document.addEventListener('DOMContentLoaded', async function () {
     iframeUrl: iframeContainer.dataset.iframeUrl,
     iframeContainer: iframeContainer,
   });
-  const transaction = jsonParseReturningNumbers(iframeContainer.dataset.transaction)
+  const orderNumber =     iframeContainer.dataset.orderNumber
+  const orderToken =      iframeContainer.dataset.orderToken
+  const paymentMethodId = iframeContainer.dataset.paymentMethodId
+  const transaction =     jsonParseReturningNumbers(iframeContainer.dataset.transaction)
+  const statusContainer = document.getElementById('payment-status-container');
 
   const handlePaymentMethodSubmission = async (event) => {
     event.preventDefault();
@@ -66,7 +94,7 @@ document.addEventListener('DOMContentLoaded', async function () {
     try {
       // disable the submit button as we await payment creation
       cardButton.disabled = true;
-      const paymentResults = await createPayment(acima, transaction);
+      await createPayment(acima, transaction, orderNumber, orderToken, paymentMethodId);
     } catch (e) {
       cardButton.disabled = false;
     }
