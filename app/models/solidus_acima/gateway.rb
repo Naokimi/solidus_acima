@@ -67,18 +67,23 @@ module SolidusAcima
 
     def credit(_amount, response_code, options)
       payment_source = options[:originator].payment.source
+      lease_id = payment_source.lease_id
 
-      url = "#{api_url}/contracts/#{payment_source.lease_id}/termination"
-      response = HTTParty.post(url, headers: v2_headers)
+      if acima_payment_captured?(lease_id)
+        url = "#{api_url}/contracts/#{lease_id}/termination"
+        response = HTTParty.post(url, headers: v2_headers)
 
-      raise 'Acima Server Response Error: Did not get correct response code' unless response.success?
+        raise 'Acima Server Response Error: Did not get correct response code' unless response.success?
 
-      ActiveMerchant::Billing::Response.new(
-        true,
-        'Transaction credited',
-        response || {},
-        authorization: response_code
-      )
+        ActiveMerchant::Billing::Response.new(
+          true,
+          'Transaction credited',
+          response || {},
+          authorization: response_code
+        )
+      else
+        void(response_code, { originator: options[:originator].payment })
+      end
     end
 
     private
@@ -102,6 +107,13 @@ module SolidusAcima
 
     def v2_headers
       { 'Authorization': "Bearer #{acima_bearer_token}", 'Accept': 'application/vnd.acima-v2+json' }
+    end
+
+    def acima_payment_captured?(lease_id)
+      url = "#{api_url}/contracts/#{lease_id}/status"
+      headers = { 'Authorization': "Bearer #{acima_bearer_token}", 'Accept': 'application/vnd.acima-v1+json' }
+      response = HTTParty.get(url, headers: headers)
+      response.success?
     end
   end
 end
